@@ -10,12 +10,18 @@ const IDL = require("../target/idl/anchor.json");
 const votingAddress = new PublicKey("FyUxZy67eUenJwRsucA7iJozGLSFJf3xzq5hR6SXrtUv")
 
 describe("Anchor", () => {
+  let context;
+  let provider;
+  let votingProgram;
+
+  before( async () =>  {
+     context = await startAnchor("", [{ name: "anchor", programId: votingAddress }], []);
+     provider = new BankrunProvider(context);
+
+     votingProgram = new Program<Anchor>(IDL, provider);
+  })
+
   it("Initialize Poll!", async () => {
-    const context = await startAnchor("", [{ name: "anchor", programId: votingAddress }], []);
-    const provider = new BankrunProvider(context);
-
-    const votingProgram = new Program<Anchor>(IDL, provider);
-
     await votingProgram.methods.initializePoll(
       new anchor.BN(1),
       new anchor.BN(0),
@@ -38,4 +44,54 @@ describe("Anchor", () => {
 
     console.log("Poll initialized!");
   });
+
+  it("Initialize Candidate!", async () => {
+    await votingProgram.methods.initializeCandidate(
+      "Rust",
+      new anchor.BN(1)
+    ).rpc();
+    await votingProgram.methods.initializeCandidate(
+      "TypeScript",
+      new anchor.BN(1)
+    ).rpc();
+
+    const [rustCandidateAddress] = PublicKey.findProgramAddressSync(
+      [new anchor.BN(1).toArrayLike(Buffer, "le", 8),Buffer.from("Rust")],
+      votingAddress
+    )
+
+    const rustCandidate = await votingProgram.account.candidate.fetch(rustCandidateAddress)
+
+    console.log("Rust Candidate:", rustCandidate);
+
+    expect(rustCandidate.candidateVotes.toNumber()).to.equal(0);
+
+    const [typeScriptCandidateAddress] = PublicKey.findProgramAddressSync(
+      [new anchor.BN(1).toArrayLike(Buffer, "le", 8), Buffer.from("TypeScript")],
+      votingAddress
+    )
+    const typeScriptCandidate = await votingProgram.account.candidate.fetch(typeScriptCandidateAddress);
+
+    console.log("TypeScript Candidate:", typeScriptCandidate);
+
+    expect(typeScriptCandidate.candidateVotes.toNumber()).to.equal(0);
+  });
+
+  it("Vote for Candidate!", async () => {
+    await votingProgram.methods.vote(
+      "Rust",
+      new anchor.BN(1),
+    ).rpc();
+
+    const [rustCandidateAddress] = PublicKey.findProgramAddressSync(
+      [new anchor.BN(1).toArrayLike(Buffer, "le", 8), Buffer.from("Rust")],
+      votingAddress
+    )
+
+    const rustCandidate = await votingProgram.account.candidate.fetch(rustCandidateAddress);
+
+    console.log("Rust Candidate:", rustCandidate);
+
+    expect(rustCandidate.candidateVotes.toNumber()).to.equal(1);
+  })
 });
