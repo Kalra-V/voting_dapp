@@ -12,13 +12,14 @@ const votingAddress = new PublicKey("FyUxZy67eUenJwRsucA7iJozGLSFJf3xzq5hR6SXrtU
 describe("Anchor", () => {
   let context;
   let provider;
-  let votingProgram;
+  anchor.setProvider(anchor.AnchorProvider.env());
+  let votingProgram = anchor.workspace.anchor as Program<Anchor>;
 
   before( async () =>  {
-     context = await startAnchor("", [{ name: "anchor", programId: votingAddress }], []);
-     provider = new BankrunProvider(context);
+    //  context = await startAnchor("", [{ name: "anchor", programId: votingAddress }], []);
+    //  provider = new BankrunProvider(context);
 
-     votingProgram = new Program<Anchor>(IDL, provider);
+    //  votingProgram = new Program<Anchor>(IDL, provider);
   })
 
   it("Initialize Poll!", async () => {
